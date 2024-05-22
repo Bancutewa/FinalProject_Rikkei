@@ -9,23 +9,16 @@ import { useAuth } from '../../../../../context/auth.context';
 const LayoutAdminContainer = ({ component: Component, isHeader, isSidebar, title }) => {
 
     const navigate = useNavigate();
-    const { setIsLoggedIn } = useAuth();
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
     useEffect(() => {
         const token = localStorage.getItem("token");
-        if (!token) {
-            return navigate(SCREEN_URL.ADMIN_LOGIN);
-        }
-
         const DecodedToken = decodeToken(token);
-        //  Invalid Signature handle bug chưa thành công, vẫn trả về được decodedToken
         const isAdmin = DecodedToken?.role === 'admin';
-
         setIsLoggedIn(isAdmin);
-
         if (!isAdmin) {
             return navigate(SCREEN_URL.ADMIN_LOGIN);
         }
-    }, [navigate, setIsLoggedIn]);
+    }, [navigate, setIsLoggedIn, isLoggedIn]);
 
     return (
         <>

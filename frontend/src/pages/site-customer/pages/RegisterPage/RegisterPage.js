@@ -114,12 +114,6 @@ const RegisterPage = () => {
                         <Form.Control type="password" className="form-control" id="password2" ref={confirmPasswordRef} />
                     </div>
                     <div className="d-flex justify-content-between">
-                        <div className="mb-3 form-check">
-                            <input type="checkbox" className="form-check-input" id="check" />
-                            <label className="form-check-label" htmlFor="check">
-                                Check me out
-                            </label>
-                        </div>
                         <Link to={SCREEN_URL.LOGIN}>Đã có tài khoản, quay lại trong đăng nhập</Link>
                     </div>
                     <Button variant="primary" onClick={onSubmit}>

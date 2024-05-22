@@ -6,11 +6,23 @@ import './style.css'
 import { getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { storage } from '../../../../../config/firebaseconfig/firebase.config';
 import { fetchCategoriesApi } from '../../../../../api/categoryAPI';
+import { useAuth } from '../../../../../context/auth.context';
+import { toast } from 'react-toastify';
 
 const ProductCreateAdminPage = () => {
-
+    // Khởi tạo State 
+    const [name, setName] = useState('');
+    const [category, setCategory] = useState('');
+    const [price, setPrice] = useState('');
+    const [quantity, setQuantity] = useState('')
+    const [description, setDescription] = useState('')
+    const [imageFile, setImageFile] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
+
+
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
 
 
     const fetchData = async () => {
@@ -19,7 +31,6 @@ const ProductCreateAdminPage = () => {
             setProducts(fetchedProducts.data.products);
 
             const fetchedCategories = await fetchCategoriesApi();
-            console.log(fetchedCategories.data.categories.id);
             setCategories(fetchedCategories.data.categories);
         } catch (error) {
             console.error("Error fetching products:", error);
@@ -30,61 +41,76 @@ const ProductCreateAdminPage = () => {
         fetchData();
     }, []);
 
-    // Khởi tạo State 
-    const [name, setName] = useState('');
-    const [image, setImage] = useState('');
-    const [category, setCategory] = useState('');
-    const [price, setPrice] = useState('');
-    const [quantity, setQuantity] = useState('')
-    const [description, setDescription] = useState('')
-
-    const [imageFile, setImageFile] = useState(null);
-
 
 
     const handleImageChange = (e) => {
-        setImageFile(e.target.files[0]);
+        const file = e.target.files[0];
+        setImageFile(file);
+
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setPreviewImage(null);
+        }
     };
     // Handle Event
     const onChangeProduct = async () => {
-        if (!imageFile) {
-            alert("Vui lòng chọn một hình ảnh.");
+        if (!name || !category || !price || !quantity || !description || !imageFile) {
+            toast.warning("Vui lòng nhập đầy đủ thông tin.");
             return;
         }
 
         const storageRef = ref(storage, `productImages/${imageFile.name}`);
 
-        const uploadTask = uploadBytesResumable(storageRef, imageFile);
+        try {
+            const uploadTask = uploadBytesResumable(storageRef, imageFile);
+            await new Promise((resolve, reject) => {
+                uploadTask.on(
+                    'state_changed',
+                    null,
+                    (error) => {
+                        console.error("Error uploading image:", error);
+                        toast.error("Lỗi khi tải lên hình ảnh.");
+                        reject(error);
+                    },
+                    async () => {
+                        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                        const productUpdate = {
+                            name: name,
+                            price: price,
+                            image: downloadURL,
+                            description: description,
+                            category: category,
+                            quantity: quantity,
+                        };
+                        await createProductsAPI(productUpdate);
+                        toast.success(`Đã thêm mới sản phẩm!`);
 
-        uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-            },
-            (error) => {
-                console.error("Error uploading image:", error);
-                alert("Đã xảy ra lỗi khi tải lên hình ảnh.");
-            },
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                setImage(downloadURL);
+                        setName('');
+                        setCategory('');
+                        setPrice('');
+                        setQuantity('');
+                        setDescription('');
+                        setImageFile(null);
+                        setPreviewImage(null);
 
-                const productUpdate = {
-                    name: name,
-                    price: price,
-                    image: downloadURL,
-                    description: description,
-                    category: category,
-                    quantity: quantity
-                };
+                    }
+                );
+            });
 
-                try {
-                    await createProductsAPI(productUpdate);
-                    alert(`Đã thêm mới sản phẩm!`);
-                } catch {
-                    alert(`Không thể thêm sản phẩm`);
-                }
+        } catch (error) {
+            if (error.message === "Unauthorized") {
+                toast.error("Bạn không phải là admin.");
+                setIsLoggedIn(false)
+            } else {
+                console.log("Error updating product:", error);
+                toast.error("Có lỗi xảy ra khi cập nhật sản phẩm.");
             }
-        );
+        }
     };
     return (
         <main className='content'>
@@ -123,6 +149,9 @@ const ProductCreateAdminPage = () => {
                 <div className="input-group">
                     <label htmlFor="img">Hình ảnh:</label>
                     <input type="file" id="img" onChange={handleImageChange} />
+                    {previewImage && (
+                        <img src={previewImage} alt="Image Preview" className="img-preview" />
+                    )}
                 </div>
                 <div className="">
                     <input type="submit" value="Thêm sản phẩm" onClick={onChangeProduct} />

@@ -45,7 +45,7 @@ const AdminLoginPage = (props) => {
         const myDecodedToken = decodeToken(token);
         const isAdmin = myDecodedToken?.role === 'admin';
 
-        if (isAdmin) {
+        if (myDecodedToken?.id && isAdmin) {
             return navigate(SCREEN_URL.ADMIN_HOME);
         }
     }, []);

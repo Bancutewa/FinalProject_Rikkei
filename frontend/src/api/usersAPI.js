@@ -25,16 +25,35 @@ export const fetchUserAPIByID = async (id) => {
 
 // Create category
 export const createUserAPI = async (user_create) => {
-    const response = await axiosInstance.post(API.USERS, user_create);
-    return response.data;
+    try {
+        const response = await axiosInstance.post(API.USERS, user_create);
+        return response.data;
+    } catch (error) {
+        if ((error.response && error.response.status === 401) || error.response.status === 403) {
+            throw new Error("Unauthorized");
+        } else if (error.response) {
+            throw new Error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+        } else {
+            throw new Error("Không thể kết nối đến máy chủ.");
+        }
+    }
 };
-
 
 // Update category
 // category_update => {id: xx, name: ""}
 export const updateUserAPI = async (user_update) => {
-    const response = await axiosInstance.put(`${API.USERS}/${user_update.id}`, user_update);
-    return response.data;
+    try {
+        const response = await axiosInstance.put(`${API.USERS}/${user_update.id}`, user_update);
+        return response.data;
+    } catch (error) {
+        if ((error.response && error.response.status === 401) || error.response.status === 403) {
+            throw new Error("Unauthorized");
+        } else if (error.response) {
+            throw new Error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+        } else {
+            throw new Error("Không thể kết nối đến máy chủ.");
+        }
+    }
 };
 
 // Delete category
@@ -43,8 +62,13 @@ export const deleteUserAPI = async (userID) => {
         await axiosInstance.delete(`${API.USERS}/${userID}`);
         return { message: "User đã xóa thành công." };
     } catch (error) {
-        console.error("Lỗi khi xóa User:", error);
-        throw error;
+        if ((error.response && error.response.status === 401) || error.response.status === 403) {
+            throw new Error("Unauthorized");
+        } else if (error.response) {
+            throw new Error("Đã có lỗi xảy ra. Vui lòng thử lại.");
+        } else {
+            throw new Error("Không thể kết nối đến máy chủ.");
+        }
     }
 };
 

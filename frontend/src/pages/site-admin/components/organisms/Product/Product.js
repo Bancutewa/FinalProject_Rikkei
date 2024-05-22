@@ -7,7 +7,6 @@ const Product = ({ index, data, deleteProduct }) => {
     const { id, name, image, category, price, quantity, created_at, updated_at } = data
     return (
         <tr>
-            <td>{index + 1}</td>
             <td>{id}</td>
             <td>{created_at}</td>
             <td>{updated_at}</td>

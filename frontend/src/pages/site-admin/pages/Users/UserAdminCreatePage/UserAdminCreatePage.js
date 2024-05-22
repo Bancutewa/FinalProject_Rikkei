@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "./style.css";
 import { createUserAPI } from "../../../../../api/usersAPI";
+import { useAuth } from "../../../../../context/auth.context";
+import { toast } from "react-toastify";
 
 const UserAdminCreatePage = () => {
     const [name, setName] = useState("");
@@ -10,21 +12,27 @@ const UserAdminCreatePage = () => {
     const [address, setAddress] = useState("");
     const [phone, setPhone] = useState("");
 
+
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
+
     const onCreateUser = async () => {
         try {
             const newUser = {
                 name,
                 email,
                 username,
-                password, // Lưu ý về bảo mật mật khẩu (xem bên dưới)
+                password,
                 address,
                 phone,
             };
             await createUserAPI(newUser);
-            alert("Đã tạo người dùng mới thành công!");
+            toast.success("Đã tạo người dùng mới thành công!");
         } catch (error) {
-            alert("Tên người dùng đã tồn tại");
-            console.error("Error creating user:", error);
+            if (error.message === "Unauthorized") {
+                toast.error("BẠN KHÔNG PHẢI LÀ ADMIN");
+                setIsLoggedIn(false);
+            }
+            console.log("Error updating user:", error);
         }
     };
 

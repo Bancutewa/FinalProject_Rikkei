@@ -5,6 +5,8 @@ import { storage } from "../../../../../config/firebaseconfig/firebase.config"; 
 import { fetchProductAPIByID, updateProductsAPI } from "../../../../../api/productsAPI";
 import { fetchCategoriesApi } from "../../../../../api/categoryAPI";
 import "./style.css";
+import { toast } from "react-toastify";
+import { useAuth } from "../../../../../context/auth.context";
 
 const ProductEditAdminPage = () => {
     const params = useParams();
@@ -15,9 +17,13 @@ const ProductEditAdminPage = () => {
     const [category, setCategory] = useState("");
     const [price, setPrice] = useState("");
     const [quantity, setQuantity] = useState("");
-    const [imageFile, setImageFile] = useState(null);
     const [imageUrl, setImageUrl] = useState("");
+    const [imageFile, setImageFile] = useState(null);
+    const [previewImage, setPreviewImage] = useState(null);
     const [description, setDescription] = useState('')
+
+
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
 
 
     const [categories, setCategories] = useState([]);
@@ -30,7 +36,7 @@ const ProductEditAdminPage = () => {
                 setProduct(currentProduct.data);
                 setName(currentProduct.data.name);
                 setImageUrl(currentProduct.data.image);
-                setCategory(currentProduct.data.category);
+                setCategory(currentProduct.data.category.id);
                 setPrice(currentProduct.data.price);
                 setQuantity(currentProduct.data.quantity);
                 setDescription(currentProduct.data.description);
@@ -46,34 +52,68 @@ const ProductEditAdminPage = () => {
 
     // Xử lý khi chọn ảnh mới
     const handleImageChange = (e) => {
-        setImageFile(e.target.files[0]);
+        const file = e.target.files[0];
+        setImageFile(file);
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewImage(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setPreviewImage(null);
+        }
     };
 
 
     const onChangeProduct = async () => {
+        if (!name || !category || !price || !quantity || !description) {
+            toast.error("Vui lòng nhập đầy đủ thông tin.");
+            return;
+        }
         try {
             if (imageFile) {
                 const storageRef = ref(storage, `productImages/${imageFile.name}`);
                 const uploadTask = uploadBytesResumable(storageRef, imageFile);
-                await uploadTask;
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                setImageUrl(downloadURL);
+
+                await new Promise((resolve, reject) => {
+                    uploadTask.on(
+                        'state_changed',
+                        null,
+                        (error) => {
+                            console.error("Error uploading image:", error);
+                            toast.error("Lỗi khi tải lên hình ảnh.");
+                            reject(error);
+                        },
+                        async () => {
+                            const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+                            setImageUrl(downloadURL)
+                            const updatedProduct = {
+                                id: product.id,
+                                name: name,
+                                price: price,
+                                image: downloadURL,
+                                description: description,
+                                category: category,
+                                quantity: quantity
+                            };
+
+                            await updateProductsAPI(updatedProduct);
+                            toast.success(`Đã cập nhật sản phẩm ID ${product.id}!`);
+                        }
+                    );
+                });
             }
 
-            const updatedProduct = {
-                id: product.id,
-                name: name,
-                price: price,
-                image: imageUrl,
-                description: description,
-                category: category,
-                quantity: quantity
-            };
-            await updateProductsAPI(updatedProduct);
-            alert(`Đã cập nhật sản phẩm ID ${product.id}`);
+
         } catch (error) {
-            alert("Lỗi khi cập nhật sản phẩm.");
-            console.error("Error updating product:", error);
+            if (error.message === "Unauthorized") {
+                toast.error("Bạn không phải là admin.");
+                setIsLoggedIn(false)
+            } else {
+                console.error("Error updating product:", error);
+                toast.error("Có lỗi xảy ra khi cập nhật sản phẩm.");
+            }
         }
     };
 
@@ -114,9 +154,12 @@ const ProductEditAdminPage = () => {
                 <div className="input-group">
                     <label htmlFor="img">Hình ảnh:</label>
                     <input type="file" id="img" onChange={handleImageChange} />
+                    {previewImage ? (
+                        <img src={previewImage} alt="Image Preview" className="img-preview" />
+                    ) : (
+                        imageUrl && <img src={imageUrl} alt="Product" style={{ width: "100px", objectFit: "contain" }} />
+                    )}
                 </div>
-                {imageUrl && <img src={imageUrl} alt="Product" style={{ width: "100px", objectFit: "contain" }} />}
-
                 <div className="">
                     <input type="submit" value="Cập nhật" onClick={onChangeProduct} />
                 </div>

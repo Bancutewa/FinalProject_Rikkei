@@ -2,11 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./style.css";
 import { fetchUserAPIByID, updateUserAPI } from "../../../../../api/usersAPI";
+import { useAuth } from "../../../../../context/auth.context";
+import { toast } from "react-toastify";
 
 const UserAdminEditPage = () => {
     const params = useParams();
-    const [user, setUser] = useState(null);
 
+    // ==========State=============
+    const [user, setUser] = useState(null);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [username, setUsername] = useState("");
@@ -15,24 +18,24 @@ const UserAdminEditPage = () => {
     const [phone, setPhone] = useState("");
     const [role, setRole] = useState("");
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const currentUser = await fetchUserAPIByID(params.userId);
-                setUser(currentUser);
-                setName(currentUser.name);
-                setUsername(currentUser.username);
-                setPassword(currentUser.password);
-                setAddress(currentUser.address);
-                setEmail(currentUser.email);
-                setPhone(currentUser.phone);
-                setRole(currentUser.role);
-            } catch (error) {
-                console.error("Error fetching user data:", error);
-            }
-        };
-        fetchData();
-    }, [params.userId]);
+    const { isLoggedIn, setIsLoggedIn } = useAuth();
+
+    const fetchData = async () => {
+        try {
+            const currentUser = await fetchUserAPIByID(params.userId);
+            setUser(currentUser);
+            setName(currentUser.name);
+            setUsername(currentUser.username);
+            setPassword(currentUser.password);
+            setAddress(currentUser.address);
+            setEmail(currentUser.email);
+            setPhone(currentUser.phone);
+            setRole(currentUser.role);
+        } catch (error) {
+            toast.error("Error fetching user data:", error)
+            console.error("Error fetching user data:", error);
+        }
+    };
 
     const onUpdateUser = async () => {
         try {
@@ -47,14 +50,19 @@ const UserAdminEditPage = () => {
                 phone
             };
             await updateUserAPI(updatedUser);
-            alert(`Đã cập nhật người dùng ID ${user.id}`);
+            toast.success(`Đã cập nhật người dùng ID ${user.id}`);
         } catch (error) {
-            alert("Lỗi khi cập nhật người dùng.");
-            console.error("Error updating user:", error);
+            if (error.message === "Unauthorized") {
+                toast.error("BẠN KHÔNG PHẢI LÀ ADMIN");
+                setIsLoggedIn(false);
+            }
+            console.log("Error updating user:", error);
         }
     };
 
-
+    useEffect(() => {
+        fetchData()
+    }, [params.userId]);
 
     return (
         <main className="content">
@@ -83,16 +91,6 @@ const UserAdminEditPage = () => {
                         placeholder="Tên đăng nhập"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
-                    />
-                </div>
-                <div className="input-group">
-                    <label htmlFor="password">Mật khẩu:</label>
-                    <input
-                        type="text"
-                        id="password"
-                        placeholder="Mật khẩu"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
                     />
                 </div>
                 <div className="input-group">
